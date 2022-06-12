@@ -28,14 +28,13 @@
 #endif
 LGFX_Sprite canvas(&display);
 
-static const lgfx::U8g2font u8g2font1(u8g2_font_FreeSansBoldOblique40pt7b);
-static const lgfx::U8g2font u8g2font2(u8g2_font_FreeSansBoldOblique18pt7ba);
+static const lgfx::U8g2font u8g2font40(u8g2_font_FreeSansBoldOblique40pt7b);
+static const lgfx::U8g2font u8g2font18a(u8g2_font_FreeSansBoldOblique18pt7ba);
 
 Adafruit_BMP085 bmp180;
 Adafruit_SHT31 sht31 = Adafruit_SHT31();
 
 void DrawParameter(int line, float val, int format, String drawunit, int warn_col);
-void RightJustDigAdj(int val, int *x);
 
 void setup()
 {
@@ -136,44 +135,35 @@ void loop() {
 
 void DrawParameter(int line, float val, int format, String drawunit, int warn_col)
 {
+  String Str_set;
   char str[8];
-  int rx;
-  int adjval;
+  int num_size;   // 数字フォント基準幅（フォント毎に固定：調整不可）
+  int dot_size;   // 小数点フォント幅（フォント毎に固定：調整不可）
+  int x_adj;      // x軸右寄せ調整値（フォント毎に固定：調整不可）
 
-  dtostrf((int)(val * pow(10, format)) / (float)pow(10, format), 7, format, str);
-  adjval = ((int)(val * pow(10, format)) % 10);
+  int rx = 170;         // 右寄せ位置
+  int line_space = 60;  // 行間隔
+  int x_offset = 6;     // X軸オフセット
+  int y_offset = 4;     // Y軸オフセット
+
+  if (format == 0) {
+    Str_set = String((int)val);
+  } else {
+    Str_set = String(val, format);
+  }
+  Str_set.toCharArray(str, sizeof(str));
 
   canvas.setTextSize(1);
   canvas.setTextColor(warn_col);
-  canvas.setFont(&u8g2font1);
+  canvas.setFont(&u8g2font40);
   canvas.setTextDatum(textdatum_t::top_left);
-  rx = 170 - canvas.textWidth(str);
-  RightJustDigAdj(adjval, &rx);
-  canvas.drawString(str, rx, (line * 60));
+  canvas.setFont(&u8g2font40); num_size = 40;  dot_size = 20;  x_adj = 12;
+  canvas.drawString(str, rx - (strlen(str) * num_size) - (format ? 0 : dot_size) + x_adj + x_offset, (line * line_space) + y_offset);
   if (drawunit == "℃") {
-    canvas.setFont(&u8g2font2);
+    canvas.setFont(&u8g2font18a);
   } else {
     canvas.setFont(&fonts::FreeSansBoldOblique18pt7b);
   }
   canvas.setTextDatum(textdatum_t::bottom_left);
-  canvas.drawString(drawunit, 170, ((line + 1) * 60));
-}
-
-// u8g2_font_FreeSansBoldOblique40pt7b前提の右揃え調整
-void RightJustDigAdj(int val, int *x)
-{
-  int diff = 0;
-
-  if (val == 0) diff = +0;
-  if (val == 1) diff = -4;
-  if (val == 2) diff = +1;
-  if (val == 3) diff = +0;
-  if (val == 4) diff = -2;
-  if (val == 5) diff = +1;
-  if (val == 6) diff = +0;
-  if (val == 7) diff = +4;
-  if (val == 8) diff = +0;
-  if (val == 9) diff = -1;
-
-  *x += diff;
+  canvas.drawString(drawunit, rx, ((line + 1) * line_space));
 }
